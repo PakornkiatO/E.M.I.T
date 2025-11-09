@@ -2,9 +2,17 @@ const express = require("express");
 const http = require("http");
 const {Server} = require("socket.io");
 const cors = require("cors");
+const dotenv = require("dotenv");
+
+const connectDB = require("./config/db");
+const authRoute = require("./routes/authRoute");
+
+dotenv.config();
+connectDB();
 
 const app = express();
 app.use(cors());
+app.use(express.json());
 const server = http.createServer(app);
 
 const io = new Server(server, {
@@ -25,6 +33,8 @@ io.on("connection", (socket) => {
         console.log(`❌ Disconnected: ${socket.id}`);
     });
 });
+
+app.use("/api/auth", authRoute);
 
 server.listen(3001, () => {
     console.log("🚀 Server is running on http://124.122.140.111:3001");
