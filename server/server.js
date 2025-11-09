@@ -9,7 +9,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
     cors:{
-        origin: "http://124.122.140.111:3000",
+        origin: "*",
         methods: ["GET", "POST"]
     }
 });
@@ -27,5 +27,5 @@ io.on("connection", (socket) => {
 });
 
 server.listen(3001, () => {
-    console.log("🚀 Server is running on http://124.122.140.111:30001");
+    console.log("🚀 Server is running on http://124.122.140.111:3001");
 });
