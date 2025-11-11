@@ -27,10 +27,6 @@ function LoginPage({ onAuth }) {
 
             if (response.data.token) {
                 // Login successful - proceed to app
-                localStorage.setItem('token', response.data.token);
-                localStorage.setItem('username', response.data.username);
-                localStorage.setItem('userId', response.data.userId);
-          
                 setSuccess('✅ เข้าสู่ระบบสำเร็จ!');
                 
                 setTimeout(() => {
@@ -166,149 +162,149 @@ function LoginPage({ onAuth }) {
         },
     };
 
-  return (
-    <>
-      <style>{`
-        * {
-          box-sizing: border-box;
-        }
-        body {
-          margin: 0;
-          padding: 0;
-        }
-        input:focus {
-          outline: none;
-          border-color: #667eea !important;
-          box-shadow: 0 0 5px rgba(102, 126, 234, 0.3) !important;
-        }
-        input:disabled {
-          background-color: #f5f5f5;
-          cursor: not-allowed;
-        }
-        button:hover:not(:disabled) {
-          opacity: 0.9;
-          transform: translateY(-2px);
-        }
-        button:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-        @keyframes slideIn {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
+    return (
+        <>
+        <style>{`
+            * {
+            box-sizing: border-box;
+            }
+            body {
+            margin: 0;
+            padding: 0;
+            }
+            input:focus {
+            outline: none;
+            border-color: #667eea !important;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.3) !important;
+            }
+            input:disabled {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+            }
+            button:hover:not(:disabled) {
+            opacity: 0.9;
+            transform: translateY(-2px);
+            }
+            button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            }
+            @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            }
+        `}</style>
 
-      <div style={styles.container}>
-        <div style={styles.box}>
-          <h1 style={styles.title}>
-            {isLogin ? 'เข้าสู่ระบบ' : 'สร้างบัญชี'}
-          </h1>
+        <div style={styles.container}>
+            <div style={styles.box}>
+            <h1 style={styles.title}>
+                {isLogin ? 'เข้าสู่ระบบ' : 'สร้างบัญชี'}
+            </h1>
 
-          <form onSubmit={handleSubmit} style={styles.form}>
-            {/* Username Input */}
-            <div style={styles.formGroup}>
-              <label htmlFor="username" style={styles.label}>
-                ชื่อผู้ใช้
-              </label>
-              <input
-                id="username"
-                type="text"
-                placeholder="กรอกชื่อผู้ใช้"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
+            <form onSubmit={handleSubmit} style={styles.form}>
+                {/* Username Input */}
+                <div style={styles.formGroup}>
+                <label htmlFor="username" style={styles.label}>
+                    ชื่อผู้ใช้
+                </label>
+                <input
+                    id="username"
+                    type="text"
+                    placeholder="กรอกชื่อผู้ใช้"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                    disabled={loading}
+                    style={styles.input}
+                />
+                </div>
+
+                {/* Password Input */}
+                <div style={styles.formGroup}>
+                <label htmlFor="password" style={styles.label}>
+                    รหัสผ่าน
+                </label>
+                <input
+                    id="password"
+                    type="password"
+                    placeholder="กรอกรหัสผ่าน"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    disabled={loading}
+                    style={styles.input}
+                />
+                </div>
+
+                {/* Error Message */}
+                {error && (
+                <div style={styles.errorMessage}>
+                    ⚠️ {error}
+                </div>
+                )}
+
+                {/* Success Message */}
+                {success && (
+                <div style={styles.successMessage}>
+                    {success}
+                </div>
+                )}
+
+                {/* Submit Button */}
+                <button
+                type="submit"
                 disabled={loading}
-                style={styles.input}
-              />
-            </div>
+                style={{
+                    ...styles.submitButton,
+                    opacity: loading ? 0.6 : 1,
+                }}
+                onMouseEnter={(e) => {
+                    if (!loading) {
+                    e.target.style.opacity = '0.9';
+                    e.target.style.transform = 'translateY(-2px)';
+                    }
+                }}
+                onMouseLeave={(e) => {
+                    if (!loading) {
+                    e.target.style.opacity = '1';
+                    e.target.style.transform = 'translateY(0)';
+                    }
+                }}
+                >
+                {loading ? 'กำลังประมวลผล...' : (isLogin ? 'เข้าสู่ระบบ' : 'สร้างบัญชี')}
+                </button>
+            </form>
 
-            {/* Password Input */}
-            <div style={styles.formGroup}>
-              <label htmlFor="password" style={styles.label}>
-                รหัสผ่าน
-              </label>
-              <input
-                id="password"
-                type="password"
-                placeholder="กรอกรหัสผ่าน"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
+            {/* Toggle Between Login/Register */}
+            <div style={styles.toggleContainer}>
+                <p style={styles.toggleText}>
+                {isLogin ? 'ยังไม่มีบัญชี?' : 'มีบัญชีแล้ว?'}
+                </p>
+                <button
+                type="button"
+                onClick={toggleMode}
                 disabled={loading}
-                style={styles.input}
-              />
+                style={styles.toggleButton}
+                onMouseEnter={(e) => {
+                    if (!loading) e.target.style.color = '#764ba2';
+                }}
+                onMouseLeave={(e) => {
+                    if (!loading) e.target.style.color = '#667eea';
+                }}
+                >
+                {isLogin ? 'สร้างบัญชีใหม่' : 'เข้าสู่ระบบ'}
+                </button>
             </div>
-
-            {/* Error Message */}
-            {error && (
-              <div style={styles.errorMessage}>
-                ⚠️ {error}
-              </div>
-            )}
-
-            {/* Success Message */}
-            {success && (
-              <div style={styles.successMessage}>
-                {success}
-              </div>
-            )}
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                ...styles.submitButton,
-                opacity: loading ? 0.6 : 1,
-              }}
-              onMouseEnter={(e) => {
-                if (!loading) {
-                  e.target.style.opacity = '0.9';
-                  e.target.style.transform = 'translateY(-2px)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!loading) {
-                  e.target.style.opacity = '1';
-                  e.target.style.transform = 'translateY(0)';
-                }
-              }}
-            >
-              {loading ? 'กำลังประมวลผล...' : (isLogin ? 'เข้าสู่ระบบ' : 'สร้างบัญชี')}
-            </button>
-          </form>
-
-          {/* Toggle Between Login/Register */}
-          <div style={styles.toggleContainer}>
-            <p style={styles.toggleText}>
-              {isLogin ? 'ยังไม่มีบัญชี?' : 'มีบัญชีแล้ว?'}
-            </p>
-            <button
-              type="button"
-              onClick={toggleMode}
-              disabled={loading}
-              style={styles.toggleButton}
-              onMouseEnter={(e) => {
-                if (!loading) e.target.style.color = '#764ba2';
-              }}
-              onMouseLeave={(e) => {
-                if (!loading) e.target.style.color = '#667eea';
-              }}
-            >
-              {isLogin ? 'สร้างบัญชีใหม่' : 'เข้าสู่ระบบ'}
-            </button>
-          </div>
+            </div>
         </div>
-      </div>
-    </>
-  );
+        </>
+    );
 }
 
 export default LoginPage;

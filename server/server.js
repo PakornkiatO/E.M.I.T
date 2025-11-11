@@ -26,9 +26,9 @@ const io = new Server(server, {
 io.on("connection", (socket) => {
     console.log("✅ New socket connected:", socket.id);
 
-    socket.on("send_message", (data) => {
-        console.log(`Message from ${socket.id}: ${data.message}`);
-    });
+    // socket.on("send_message", (data) => {
+    //     console.log(`Message from ${socket.id}: ${data.message}`);
+    // });
 
     socket.on("disconnect", () => {
         console.log(`❌ Disconnected: ${socket.id}`);

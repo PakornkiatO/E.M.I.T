@@ -1,22 +1,34 @@
 import { useState, useEffect } from 'react';
-// import socket from './socket/socket';
 import LoginPage from './pages/logginPage';
 import { jwtDecode } from 'jwt-decode';
+import socket from './socket/socket';
 
 function App() {
-  // const [message, setMessage] = useState("");
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [username, setUsername] = useState(localStorage.getItem('username') || null);
 
   useEffect(() => {
     // Check if token is expired when app loads
     if (token) {
-      const isExpired = isTokenExpired(token);
-      if (isExpired) {
+      if (isTokenExpired(token)) {
         handleLogout();
+      } else {
+        connectSocket();
       }
     }
-  }, []);
+  }, [token]);
+
+  const connectSocket = () => {
+    if(!socket.connected) {
+      socket.connect();
+    }
+  };
+
+  const disconnectSocket = () => {
+    if (socket.connected) {
+      socket.disconnect();
+    }
+  };
 
   // Function to check if token is expired
   const isTokenExpired = (token) => {
@@ -32,36 +44,23 @@ function App() {
   const handleAuth = (newToken, newUsername) => {
     setToken(newToken);
     setUsername(newUsername);
+    localStorage.setItem('token', newToken);
+    localStorage.setItem('username', newUsername);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('username');
-    localStorage.removeItem('userId');
+    disconnectSocket();
     setToken(null);
     setUsername(null);
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
   };
-
-  // const sendMessage = () => {
-  //   if (message.trim() !== "") {
-  //     socket.emit("send_message", { message });
-  //     setMessage(""); // clear input after sending
-  //   }
-  // };
 
   if (!token) {
     return <LoginPage onAuth={handleAuth} />;
   }
 
   return (
-    // <div className="App">
-    //   <input
-    //     placeholder="Messages"
-    //     value={message}
-    //     onChange={(e) => setMessage(e.target.value)}
-    //   />
-    //   <button onClick={sendMessage}>Send</button>
-    // </div>
     <div className="app-container">
       <header className="app-header">
         <h1>💬 Chat Application</h1>

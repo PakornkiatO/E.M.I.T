@@ -1,5 +1,7 @@
 import { io } from "socket.io-client";
 
-const socket = io.connect(`http://${window.location.hostname}:3001`);
+const socket = io(`http://${window.location.hostname}:3001`, {
+    autoConnect: false
+});
 
 export default socket;
