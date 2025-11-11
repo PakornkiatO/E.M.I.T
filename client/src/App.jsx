@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import LoginPage from './pages/logginPage';
+import { useState, useEffect, use } from 'react';
+import LoginPage from './pages/loginPage';
+import LobbyPage from './pages/lobbyPage';
 import { jwtDecode } from 'jwt-decode';
 import socket from './socket/socket';
 
@@ -7,6 +8,8 @@ function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [username, setUsername] = useState(localStorage.getItem('username') || null);
   const [isOnline, setIsOnline] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState([]);
+  const [forceLogoutMessage, setForceLogoutMessage] = useState('');
 
   useEffect(() => {
     if (token) {
@@ -15,6 +18,10 @@ function App() {
       }
     }
   }, [token]);
+
+  useEffect(() => {
+    console.log('Online users updated:', onlineUsers);
+  }, [onlineUsers]);
   // connect socket on page visit
   useEffect(() => {
     if (!socket.connected) {
@@ -34,18 +41,22 @@ function App() {
       const isNowOnline = users.some(u => u.username === username);
       setIsOnline(isNowOnline);
       // you could store users list if needed
-      // setOnlineUsers(users);
+      setOnlineUsers(users);
     };
 
     const onForceLogout = (data) => {
       // server forced this socket to logout because user logged in elsewhere
       console.log('Received force_logout', data);
-      // clear auth and reload to show login page
-      localStorage.removeItem('token');
-      localStorage.removeItem('username');
-      setToken(null);
-      setUsername(null);
-      setIsOnline(false);
+      setForceLogoutMessage('🔐 Your account was logged in from another device. Please login again.');
+      // clear auth and reload to show login page after a short delay
+      setTimeout(() => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('username');
+        setToken(null);
+        setUsername(null);
+        setIsOnline(false);
+        setForceLogoutMessage('');
+      }, 3000);
     };
 
     socket.on('connect', onConnect);
@@ -96,17 +107,42 @@ function App() {
   }
 
   return (
-    <div className="app-container">
-      <header className="app-header">
-        <h1>💬 Chat Application</h1>
-        <div className="user-info">
-          <span>👤 {username}</span>
-          <button onClick={handleLogout} className="logout-btn">
-            ออกจากระบบ
-          </button>
+    <>
+      {forceLogoutMessage && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 9999,
+        }}>
+          <div style={{
+            background: 'white',
+            padding: '40px',
+            borderRadius: '10px',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)',
+            textAlign: 'center',
+            maxWidth: '400px',
+          }}>
+            <h2 style={{ color: '#c33', marginTop: 0, fontSize: '24px' }}>Session Ended</h2>
+            <p style={{ color: '#666', fontSize: '16px', lineHeight: '1.6' }}>
+              {forceLogoutMessage}
+            </p>
+            <p style={{ color: '#999', fontSize: '14px', marginBottom: 0 }}>Redirecting to login...</p>
+          </div>
         </div>
-      </header>
-    </div>
+      )}
+      <LobbyPage 
+        username={username} 
+        onlineUsers={onlineUsers} 
+        onLogout={handleLogout}
+      />
+    </>
   );
 }
 

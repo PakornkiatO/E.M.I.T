@@ -1,0 +1,223 @@
+function LobbyPage({ username, onlineUsers, onLogout }) {
+    const styles = {
+        container: {
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: '100vh',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+            padding: '20px',
+        },
+        box: {
+            background: 'white',
+            padding: '40px',
+            borderRadius: '10px',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
+            width: '100%',
+            maxWidth: '500px',
+        },
+        header: {
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '30px',
+            paddingBottom: '20px',
+            borderBottom: '2px solid #eee',
+        },
+        title: {
+            color: '#333',
+            fontSize: '28px',
+            margin: '0',
+        },
+        userInfo: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '15px',
+        },
+        username: {
+            color: '#666',
+            fontWeight: '600',
+            fontSize: '16px',
+        },
+        logoutButton: {
+            padding: '10px 20px',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '5px',
+            fontSize: '14px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'opacity 0.3s, transform 0.3s',
+        },
+        section: {
+            marginBottom: '30px',
+        },
+        sectionTitle: {
+            color: '#333',
+            fontSize: '18px',
+            fontWeight: '600',
+            marginBottom: '15px',
+            marginTop: '0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+        },
+        userCount: {
+            background: '#667eea',
+            color: 'white',
+            padding: '2px 8px',
+            borderRadius: '12px',
+            fontSize: '14px',
+            fontWeight: '600',
+        },
+        usersList: {
+            listStyle: 'none',
+            padding: '0',
+            margin: '0',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+        },
+        userItem: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '12px',
+            background: '#f8f9ff',
+            borderRadius: '8px',
+            border: '2px solid #eee',
+            transition: 'all 0.3s',
+        },
+        userItemHover: {
+            background: '#f0f2ff',
+            borderColor: '#667eea',
+        },
+        currentUser: {
+            background: '#e8f0ff',
+            borderColor: '#667eea',
+            fontWeight: '600',
+        },
+        onlineIndicator: {
+            fontSize: '16px',
+            animation: 'pulse 2s infinite',
+        },
+        userNameText: {
+            color: '#333',
+            fontWeight: '500',
+            flex: '1',
+        },
+        youBadge: {
+            background: '#667eea',
+            color: 'white',
+            padding: '4px 8px',
+            borderRadius: '4px',
+            fontSize: '12px',
+            fontWeight: '600',
+        },
+        noUsersMessage: {
+            textAlign: 'center',
+            color: '#999',
+            padding: '20px',
+            background: '#f5f5f5',
+            borderRadius: '8px',
+            fontSize: '14px',
+        },
+    };
+
+    return (
+        <>
+            <style>{`
+                * {
+                    box-sizing: border-box;
+                }
+                body {
+                    margin: 0;
+                    padding: 0;
+                }
+                button:hover:not(:disabled) {
+                    opacity: 0.9;
+                    transform: translateY(-2px);
+                }
+                button:disabled {
+                    opacity: 0.6;
+                    cursor: not-allowed;
+                }
+                @keyframes pulse {
+                    0%, 100% {
+                        opacity: 1;
+                    }
+                    50% {
+                        opacity: 0.5;
+                    }
+                }
+                .user-item:hover {
+                    background: #f0f2ff !important;
+                    border-color: #667eea !important;
+                    cursor: pointer;
+                }
+            `}</style>
+
+            <div style={styles.container}>
+                <div style={styles.box}>
+                    {/* Header */}
+                    <div style={styles.header}>
+                        <h1 style={styles.title}>💬 Chat Application</h1>
+                        <div style={styles.userInfo}>
+                            <span style={styles.username}>👤 {username}</span>
+                            <button
+                                onClick={onLogout}
+                                style={styles.logoutButton}
+                                onMouseEnter={(e) => {
+                                    e.target.style.opacity = '0.9';
+                                    e.target.style.transform = 'translateY(-2px)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.target.style.opacity = '1';
+                                    e.target.style.transform = 'translateY(0)';
+                                }}
+                            >
+                                ออกจากระบบ
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Online Users Section */}
+                    <div style={styles.section}>
+                        <h2 style={styles.sectionTitle}>
+                            🟢 Online Users
+                            <span style={styles.userCount}>{onlineUsers.length}</span>
+                        </h2>
+                        {onlineUsers.length === 0 ? (
+                            <div style={styles.noUsersMessage}>
+                                No users online at the moment
+                            </div>
+                        ) : (
+                            <ul style={styles.usersList}>
+                                {onlineUsers.map((user) => (
+                                    <li
+                                        key={user.socketId}
+                                        style={{
+                                            ...styles.userItem,
+                                            ...(user.username === username ? styles.currentUser : {}),
+                                        }}
+                                        className="user-item"
+                                    >
+                                        <span style={styles.onlineIndicator}>🟢</span>
+                                        <span style={styles.userNameText}>{user.username}</span>
+                                        {user.username === username && (
+                                            <span style={styles.youBadge}>(You)</span>
+                                        )}
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </>
+    );
+}
+
+export default LobbyPage;
