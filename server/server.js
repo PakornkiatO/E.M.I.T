@@ -7,7 +7,9 @@ const dotenv = require("dotenv");
 
 const connectDB = require("./config/db");
 const authRoute = require("./routes/authRoute");
+const chatRoute = require("./routes/chatRoute");
 const User = require("./models/userModel");
+const Message = require("./models/messageModel");
 
 dotenv.config();
 connectDB();
@@ -25,6 +27,11 @@ const io = new Server(server, {
         methods: ["GET", "POST"]
     }
 });
+
+// helper for deterministic one-on-one room key
+function roomKeyFor(a, b) {
+    return [a, b].sort((x, y) => x.localeCompare(y)).join("|");
+}
 
 io.on("connection", (socket) => {
     console.log("✅ New socket connected:", socket.id);
@@ -80,6 +87,115 @@ io.on("connection", (socket) => {
         }
     });
 
+    // User starts a one-on-one chat with target user
+    socket.on('start_chat', async ({ with: targetUsername }, ack) => {
+        try {
+            const myUsername = onlineUsers.get(socket.id);
+            if (!myUsername || !targetUsername || myUsername === targetUsername) {
+                if (ack) ack({ ok: false, error: 'invalid_participants' });
+                return;
+            }
+
+            const room = roomKeyFor(myUsername, targetUsername);
+            socket.join(room);
+
+            // send existing history (last 50)
+            const history = await Message.find({ room })
+                .sort({ createdAt: -1 })
+                .limit(50)
+                .lean();
+
+            // send back in chronological order
+            const messages = history.reverse();
+            socket.emit('chat_joined', { room, with: targetUsername });
+            socket.emit('chat_history', { room, with: targetUsername, messages });
+            if (ack) ack({ ok: true, room });
+        } catch (err) {
+            console.error('start_chat error:', err);
+            if (ack) ack({ ok: false, error: 'server_error' });
+        }
+    });
+
+    // User sends a message to target user
+    socket.on('send_message', async ({ to, content }, ack) => {
+        try {
+            const sender = onlineUsers.get(socket.id);
+            if (!sender) {
+                if (ack) ack({ ok: false, error: 'unauthorized' });
+                return;
+            }
+            if (!to || !content || typeof content !== 'string' || content.trim().length === 0) {
+                if (ack) ack({ ok: false, error: 'invalid_payload' });
+                return;
+            }
+            const receiver = to;
+            const room = roomKeyFor(sender, receiver);
+
+            // persist message
+            const doc = await Message.create({
+                room,
+                participants: [sender, receiver].sort((a, b) => a.localeCompare(b)),
+                sender,
+                receiver,
+                content: content.trim(),
+                readBy: [sender],
+            });
+
+            const message = {
+                _id: doc._id,
+                room: doc.room,
+                participants: doc.participants,
+                sender: doc.sender,
+                receiver: doc.receiver,
+                content: doc.content,
+                createdAt: doc.createdAt,
+                updatedAt: doc.updatedAt,
+            };
+
+            // ensure sender is in room
+            socket.join(room);
+            // broadcast to both participants in the room
+            io.to(room).emit('new_message', { room, message });
+            if (ack) ack({ ok: true, message });
+        } catch (err) {
+            console.error('send_message error:', err);
+            if (ack) ack({ ok: false, error: 'server_error' });
+        }
+    });
+
+    // Delete a single message (only sender allowed)
+    socket.on('delete_message', async ({ id }, ack) => {
+        try {
+            const me = onlineUsers.get(socket.id);
+            if (!me) return ack && ack({ ok: false, error: 'unauthorized' });
+            const doc = await Message.findById(id);
+            if (!doc) return ack && ack({ ok: false, error: 'not_found' });
+            if (doc.sender !== me) return ack && ack({ ok: false, error: 'forbidden' });
+
+            await Message.deleteOne({ _id: id });
+            io.to(doc.room).emit('message_deleted', { room: doc.room, id });
+            ack && ack({ ok: true });
+        } catch (err) {
+            console.error('delete_message error:', err);
+            ack && ack({ ok: false, error: 'server_error' });
+        }
+    });
+
+    // Clear chat between me and target user
+    socket.on('clear_chat', async ({ with: target }, ack) => {
+        try {
+            const me = onlineUsers.get(socket.id);
+            if (!me || !target || me === target) return ack && ack({ ok: false, error: 'invalid_participants' });
+            const room = roomKeyFor(me, target);
+            await Message.deleteMany({ room });
+            io.to(room).emit('chat_cleared', { room });
+            ack && ack({ ok: true });
+        } catch (err) {
+            console.error('clear_chat error:', err);
+            ack && ack({ ok: false, error: 'server_error' });
+        }
+    });
+
     // handle socket close (tab closed, connection lost)
     socket.on('disconnect', () => {
         const username = onlineUsers.get(socket.id);
@@ -97,6 +213,7 @@ io.on("connection", (socket) => {
 });
 
 app.use("/api/auth", authRoute);
+app.use("/api/chat", chatRoute);
 
 // Make io available to routes/controllers
 app.set('io', io);

@@ -1,6 +1,7 @@
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import LoginPage from './pages/loginPage';
 import LobbyPage from './pages/lobbyPage';
+import ChatPage from './pages/chatPage';
 import { jwtDecode } from 'jwt-decode';
 import socket from './socket/socket';
 import axios from 'axios';
@@ -8,10 +9,11 @@ import axios from 'axios';
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [username, setUsername] = useState(localStorage.getItem('username') || null);
-  const [isOnline, setIsOnline] = useState(false);
+  const [, setIsOnline] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [forceLogoutMessage, setForceLogoutMessage] = useState('');
+  const [peer, setPeer] = useState(null);
 
   useEffect(() => {
     if (token) {
@@ -73,10 +75,6 @@ function App() {
 
   // Setup socket listeners for real-time updates (listen from the start)
   useEffect(() => {
-    if (!socket.connected) {
-      socket.connect();
-    }
-
     const onUsersUpdated = (data) => {
       // Update user list in real-time when new user registers or is deleted
       console.log('Users updated from server:', data.users);
@@ -114,7 +112,8 @@ function App() {
   }, [username]);
   // connect socket on page visit
   useEffect(() => {
-    if (!socket.connected) {
+    // Only connect when authenticated
+    if (token && username && socket.disconnected) {
       socket.connect();
     }
 
@@ -190,6 +189,8 @@ function App() {
     localStorage.removeItem('token');
     localStorage.removeItem('username');
     if (socket.connected) socket.emit('user_disconnected');
+    // Fully disconnect to avoid lingering connections after logout
+    if (socket.connected) socket.disconnect();
   };
 
   if (!token) {
@@ -227,12 +228,22 @@ function App() {
           </div>
         </div>
       )}
-      <LobbyPage 
-        username={username} 
-        onlineUsers={onlineUsers}
-        allUsers={allUsers}
-        onLogout={handleLogout}
-      />
+      {peer ? (
+        <ChatPage
+          me={username}
+          peer={peer}
+          token={token}
+          onBack={() => setPeer(null)}
+        />
+      ) : (
+        <LobbyPage 
+          username={username} 
+          onlineUsers={onlineUsers}
+          allUsers={allUsers}
+          onLogout={handleLogout}
+          onStartChat={(u) => setPeer(u)}
+        />
+      )}
     </>
   );
 }

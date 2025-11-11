@@ -1,4 +1,4 @@
-function LobbyPage({ username, onlineUsers, allUsers, onLogout }) {
+function LobbyPage({ username, onlineUsers, allUsers, onLogout, onStartChat }) {
     const styles = {
         container: {
             display: 'flex',
@@ -239,6 +239,11 @@ function LobbyPage({ username, onlineUsers, allUsers, onLogout }) {
                                                 borderColor: isOnline ? '#667eea' : '#ddd',
                                             }}
                                             className="user-item"
+                                            onClick={() => {
+                                                if (user !== username && typeof onStartChat === 'function') {
+                                                    onStartChat(user);
+                                                }
+                                            }}
                                         >
                                             <span style={styles.onlineIndicator}>
                                                 {isOnline ? '🟢' : '⚫'}
