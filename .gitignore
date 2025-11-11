@@ -1,2 +1,125 @@
+// ...existing code...
 node_modules
 .env
+// ...existing code...
+
+# Node modules (any package workspace)
+**/node_modules/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Env files (keep secrets out of VCS)
+*.env
+*.env.*
+**/.env
+**/.env.*
+
+# Build outputs
+dist/
+build/
+out/
+**/dist/
+**/build/
+**/out/
+
+# Coverage
+coverage/
+**/coverage/
+
+# Caches
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+.babel.cache.json
+
+# TypeScript
+*.tsbuildinfo
+
+# OS / Editor junk
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.history/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Tooling/hosting (optional)
+.vercel/
+.netlify/
+.next/
+.nuxt/
+```// filepath: /Users/piakpond/Desktop/chula course/Junior/2110471 COMP NETWORK I/chat-project/.gitignore
+// ...existing code...
+node_modules
+.env
+// ...existing code...
+
+# Node modules (any package workspace)
+**/node_modules/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Env files (keep secrets out of VCS)
+*.env
+*.env.*
+**/.env
+**/.env.*
+
+# Build outputs
+dist/
+build/
+out/
+**/dist/
+**/build/
+**/out/
+
+# Coverage
+coverage/
+**/coverage/
+
+# Caches
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+.babel.cache.json
+
+# TypeScript
+*.tsbuildinfo
+
+# OS / Editor junk
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.history/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Tooling/hosting (optional)
+.vercel/
+.netlify/
+.next/
+.nuxt/
