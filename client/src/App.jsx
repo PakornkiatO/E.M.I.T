@@ -3,12 +3,14 @@ import LoginPage from './pages/loginPage';
 import LobbyPage from './pages/lobbyPage';
 import { jwtDecode } from 'jwt-decode';
 import socket from './socket/socket';
+import axios from 'axios';
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [username, setUsername] = useState(localStorage.getItem('username') || null);
   const [isOnline, setIsOnline] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
   const [forceLogoutMessage, setForceLogoutMessage] = useState('');
 
   useEffect(() => {
@@ -22,6 +24,94 @@ function App() {
   useEffect(() => {
     console.log('Online users updated:', onlineUsers);
   }, [onlineUsers]);
+
+  // Fetch all users from database and setup periodic refresh
+  useEffect(() => {
+    const fetchAllUsers = async () => {
+      try {
+        const API_URL = `http://${window.location.hostname}:3001/api/auth`;
+        const response = await axios.get(`${API_URL}/users`);
+        const newUsers = response.data.users || [];
+        
+        // Check for deleted users by comparing with previous state
+        setAllUsers(prevUsers => {
+          const deletedUsers = prevUsers.filter(u => !newUsers.includes(u));
+          
+          // Emit deleted user events for any users that disappeared
+          deletedUsers.forEach(deletedUser => {
+            console.log('Detected deleted user:', deletedUser);
+            
+            // If current user was deleted, force logout
+            if (deletedUser === username) {
+              setForceLogoutMessage('🔐 Your account has been deleted. Please login again.');
+              setTimeout(() => {
+                localStorage.removeItem('token');
+                localStorage.removeItem('username');
+                setToken(null);
+                setUsername(null);
+                setIsOnline(false);
+                setForceLogoutMessage('');
+              }, 3000);
+            }
+          });
+          
+          return newUsers;
+        });
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      }
+    };
+    
+    // Fetch immediately
+    fetchAllUsers();
+    
+    // Fetch every 3 seconds to detect deletions
+    const interval = setInterval(fetchAllUsers, 3000);
+    
+    return () => clearInterval(interval);
+  }, [username]);
+
+  // Setup socket listeners for real-time updates (listen from the start)
+  useEffect(() => {
+    if (!socket.connected) {
+      socket.connect();
+    }
+
+    const onUsersUpdated = (data) => {
+      // Update user list in real-time when new user registers or is deleted
+      console.log('Users updated from server:', data.users);
+      setAllUsers(data.users || []);
+    };
+
+    const onUserDeleted = (data) => {
+      // Handle when a user is deleted from database
+      console.log('User deleted:', data.deletedUsername);
+      
+      // If the current user was deleted, force logout
+      if (data.deletedUsername === username) {
+        setForceLogoutMessage('🔐 Your account has been deleted. Please login again.');
+        setTimeout(() => {
+          localStorage.removeItem('token');
+          localStorage.removeItem('username');
+          setToken(null);
+          setUsername(null);
+          setIsOnline(false);
+          setForceLogoutMessage('');
+        }, 3000);
+      }
+      
+      // Remove from all users list
+      setAllUsers(prevUsers => prevUsers.filter(u => u !== data.deletedUsername));
+    };
+
+    socket.on('users_updated', onUsersUpdated);
+    socket.on('user_deleted', onUserDeleted);
+
+    return () => {
+      socket.off('users_updated', onUsersUpdated);
+      socket.off('user_deleted', onUserDeleted);
+    };
+  }, [username]);
   // connect socket on page visit
   useEffect(() => {
     if (!socket.connected) {
@@ -139,7 +229,8 @@ function App() {
       )}
       <LobbyPage 
         username={username} 
-        onlineUsers={onlineUsers} 
+        onlineUsers={onlineUsers}
+        allUsers={allUsers}
         onLogout={handleLogout}
       />
     </>

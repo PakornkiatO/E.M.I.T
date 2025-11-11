@@ -1,4 +1,4 @@
-function LobbyPage({ username, onlineUsers, onLogout }) {
+function LobbyPage({ username, onlineUsers, allUsers, onLogout }) {
     const styles = {
         container: {
             display: 'flex',
@@ -184,7 +184,7 @@ function LobbyPage({ username, onlineUsers, onLogout }) {
                     </div>
 
                     {/* Online Users Section */}
-                    <div style={styles.section}>
+                    {/* <div style={styles.section}>
                         <h2 style={styles.sectionTitle}>
                             🟢 Online Users
                             <span style={styles.userCount}>{onlineUsers.length}</span>
@@ -211,6 +211,52 @@ function LobbyPage({ username, onlineUsers, onLogout }) {
                                         )}
                                     </li>
                                 ))}
+                            </ul>
+                        )}
+                    </div> */}
+
+                    {/* All Users Section */}
+                    <div style={styles.section}>
+                        <h2 style={styles.sectionTitle}>
+                            👥 All Users
+                            <span style={styles.userCount}>{allUsers.length}</span>
+                        </h2>
+                        {allUsers.length === 0 ? (
+                            <div style={styles.noUsersMessage}>
+                                No users found
+                            </div>
+                        ) : (
+                            <ul style={styles.usersList}>
+                                {allUsers.map((user) => {
+                                    const isOnline = onlineUsers.some(u => u.username === user);
+                                    return (
+                                        <li
+                                            key={user}
+                                            style={{
+                                                ...styles.userItem,
+                                                ...(user === username ? styles.currentUser : {}),
+                                                background: isOnline ? '#e8f0ff' : '#f5f5f5',
+                                                borderColor: isOnline ? '#667eea' : '#ddd',
+                                            }}
+                                            className="user-item"
+                                        >
+                                            <span style={styles.onlineIndicator}>
+                                                {isOnline ? '🟢' : '⚫'}
+                                            </span>
+                                            <span style={styles.userNameText}>{user}</span>
+                                            {user === username && (
+                                                <span style={styles.youBadge}>(You)</span>
+                                            )}
+                                            <span style={{
+                                                fontSize: '12px',
+                                                color: isOnline ? '#667eea' : '#999',
+                                                fontWeight: '600',
+                                            }}>
+                                                {isOnline ? 'Online' : 'Offline'}
+                                            </span>
+                                        </li>
+                                    );
+                                })}
                             </ul>
                         )}
                     </div>
