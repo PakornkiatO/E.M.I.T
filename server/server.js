@@ -1,6 +1,7 @@
 const express = require("express");
 const http = require("http");
 const {Server} = require("socket.io");
+const https = require("https");
 const cors = require("cors");
 const dotenv = require("dotenv");
 
@@ -36,6 +37,24 @@ io.on("connection", (socket) => {
 
 app.use("/api/auth", authRoute);
 
-server.listen(3001, () => {
-    console.log("🚀 Server is running on http://124.122.140.111:3001");
+function getPublicIp() {
+    return new Promise((resolve) => {
+        https.get('https://api.ipify.org?format=json', (res) => {
+            let data = '';
+            res.on('data', (chunk) => (data += chunk));
+            res.on('end', () => {
+                try {
+                    const parsed = JSON.parse(data);
+                    resolve(parsed.ip || 'localhost');
+                } catch (err) {
+                    resolve('localhost');
+                }
+            });
+        }).on('error', () => resolve('localhost'));
+    });
+}
+
+server.listen(3001, async () => {
+    const ip = await getPublicIp();
+    console.log(`🚀 Server is running on http://${ip}:3001`);
 });
