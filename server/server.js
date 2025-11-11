@@ -16,6 +16,8 @@ app.use(cors());
 app.use(express.json());
 const server = http.createServer(app);
 
+const onlineUsers = new Map();
+
 const io = new Server(server, {
     cors:{
         origin: "*",
@@ -25,13 +27,14 @@ const io = new Server(server, {
 
 io.on("connection", (socket) => {
     console.log("✅ New socket connected:", socket.id);
-
-    // socket.on("send_message", (data) => {
-    //     console.log(`Message from ${socket.id}: ${data.message}`);
-    // });
+    onlineUsers.set(socket.id, socket.data.username);
+    console.log(`📊 Total online users: ${onlineUsers.size}`);
 
     socket.on("disconnect", () => {
         console.log(`❌ Disconnected: ${socket.id}`);
+        console.log(`👤 User disconnected: ${onlineUsers[socket.id]} (Socket ID: ${socket.id})`);
+        onlineUsers.delete(socket.id);
+        console.log(`📊 Total online users: ${onlineUsers.size}`);
     });
 });
 

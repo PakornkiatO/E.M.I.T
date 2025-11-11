@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import LoginPage from './pages/logginPage';
 import { jwtDecode } from 'jwt-decode';
 import socket from './socket/socket';
@@ -8,27 +8,12 @@ function App() {
   const [username, setUsername] = useState(localStorage.getItem('username') || null);
 
   useEffect(() => {
-    // Check if token is expired when app loads
     if (token) {
       if (isTokenExpired(token)) {
         handleLogout();
-      } else {
-        connectSocket();
       }
     }
   }, [token]);
-
-  const connectSocket = () => {
-    if(!socket.connected) {
-      socket.connect();
-    }
-  };
-
-  const disconnectSocket = () => {
-    if (socket.connected) {
-      socket.disconnect();
-    }
-  };
 
   // Function to check if token is expired
   const isTokenExpired = (token) => {
@@ -41,11 +26,26 @@ function App() {
     }
   };
 
+  const connectSocket = () => {
+    if (!socket.connected) {
+      socket.data = { username };
+      socket.connect();
+    }
+  };
+
+  const disconnectSocket = () => {
+    if (socket.connected) {
+      socket.disconnect();
+    }
+  };
+
   const handleAuth = (newToken, newUsername) => {
     setToken(newToken);
     setUsername(newUsername);
     localStorage.setItem('token', newToken);
     localStorage.setItem('username', newUsername);
+
+    connectSocket();
   };
 
   const handleLogout = () => {
@@ -54,6 +54,7 @@ function App() {
     setUsername(null);
     localStorage.removeItem('token');
     localStorage.removeItem('username');
+
   };
 
   if (!token) {
