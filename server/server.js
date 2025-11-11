@@ -10,6 +10,7 @@ const authRoute = require("./routes/authRoute");
 const chatRoute = require("./routes/chatRoute");
 const User = require("./models/userModel");
 const Message = require("./models/messageModel");
+const Group = require("./models/groupModel");
 
 dotenv.config();
 connectDB();
@@ -192,6 +193,99 @@ io.on("connection", (socket) => {
             ack && ack({ ok: true });
         } catch (err) {
             console.error('clear_chat error:', err);
+            ack && ack({ ok: false, error: 'server_error' });
+        }
+    });
+
+    // Join a group chat
+    socket.on('join_group', async ({ groupId }, ack) => {
+        try {
+            const me = onlineUsers.get(socket.id);
+            if (!me) return ack && ack({ ok: false, error: 'unauthorized' });
+            const group = await Group.findById(groupId).lean();
+            if (!group) return ack && ack({ ok: false, error: 'group_not_found' });
+            if (!group.members.includes(me)) return ack && ack({ ok: false, error: 'not_member' });
+            const room = `group:${group._id}`;
+            socket.join(room);
+            const history = await Message.find({ room }).sort({ createdAt: -1 }).limit(100).lean();
+            socket.emit('group_history', { groupId: group._id.toString(), name: group.name, messages: history.reverse() });
+            ack && ack({ ok: true, room });
+        } catch (err) {
+            console.error('join_group error:', err);
+            ack && ack({ ok: false, error: 'server_error' });
+        }
+    });
+
+    // Send group message
+    socket.on('send_group_message', async ({ groupId, content }, ack) => {
+        try {
+            const me = onlineUsers.get(socket.id);
+            if (!me) return ack && ack({ ok: false, error: 'unauthorized' });
+            const group = await Group.findById(groupId).lean();
+            if (!group) return ack && ack({ ok: false, error: 'group_not_found' });
+            if (!group.members.includes(me)) return ack && ack({ ok: false, error: 'not_member' });
+            if (!content || !content.trim()) return ack && ack({ ok: false, error: 'invalid_content' });
+            const room = `group:${group._id}`;
+            socket.join(room);
+            const doc = await Message.create({
+                room,
+                participants: group.members.sort((a,b)=>a.localeCompare(b)),
+                sender: me,
+                receiver: room, // logical receiver placeholder
+                content: content.trim(),
+                readBy: [me],
+            });
+            const message = {
+                _id: doc._id,
+                room: doc.room,
+                participants: doc.participants,
+                sender: doc.sender,
+                receiver: doc.receiver,
+                content: doc.content,
+                createdAt: doc.createdAt,
+                updatedAt: doc.updatedAt,
+                groupId: group._id.toString(),
+            };
+            io.to(room).emit('group_new_message', { groupId: group._id.toString(), message });
+            ack && ack({ ok: true, message });
+        } catch (err) {
+            console.error('send_group_message error:', err);
+            ack && ack({ ok: false, error: 'server_error' });
+        }
+    });
+
+    // Delete a single message in a group (only sender)
+    socket.on('delete_group_message', async ({ groupId, id }, ack) => {
+        try {
+            const me = onlineUsers.get(socket.id);
+            if (!me) return ack && ack({ ok: false, error: 'unauthorized' });
+            const room = `group:${groupId}`;
+            const doc = await Message.findOne({ _id: id, room });
+            if (!doc) return ack && ack({ ok: false, error: 'not_found' });
+            if (doc.sender !== me) return ack && ack({ ok: false, error: 'forbidden' });
+            await Message.deleteOne({ _id: id });
+            io.to(room).emit('group_message_deleted', { groupId, id });
+            ack && ack({ ok: true });
+        } catch (err) {
+            console.error('delete_group_message error:', err);
+            ack && ack({ ok: false, error: 'server_error' });
+        }
+    });
+
+    // Clear all messages in a group (member-only)
+    socket.on('clear_group_chat', async ({ groupId }, ack) => {
+        try {
+            const me = onlineUsers.get(socket.id);
+            if (!me) return ack && ack({ ok: false, error: 'unauthorized' });
+            const group = await Group.findById(groupId).lean();
+            if (!group) return ack && ack({ ok: false, error: 'group_not_found' });
+            if (!group.members.includes(me)) return ack && ack({ ok: false, error: 'not_member' });
+            const room = `group:${group._id}`;
+            await Message.deleteMany({ room });
+            io.to(room).emit('group_chat_cleared', { groupId });
+            ack && ack({ ok: true });
+        } catch (err) {
+            console.error('clear_group_chat error:', err);
             ack && ack({ ok: false, error: 'server_error' });
         }
     });

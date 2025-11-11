@@ -1,4 +1,4 @@
-function LobbyPage({ username, onlineUsers, allUsers, onLogout, onStartChat }) {
+function LobbyPage({ username, onlineUsers, allUsers, groups = [], onLogout, onStartChat, onCreateGroup, onOpenGroup }) {
     const styles = {
         container: {
             display: 'flex',
@@ -64,6 +64,11 @@ function LobbyPage({ username, onlineUsers, allUsers, onLogout, onStartChat }) {
             alignItems: 'center',
             gap: '10px',
         },
+        headerActions: {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+        },
         userCount: {
             background: '#667eea',
             color: 'white',
@@ -71,6 +76,16 @@ function LobbyPage({ username, onlineUsers, allUsers, onLogout, onStartChat }) {
             borderRadius: '12px',
             fontSize: '14px',
             fontWeight: '600',
+        },
+        createGroupBtn: {
+            padding: '8px 12px',
+            background: '#e6f0ff',
+            border: '1px solid #667eea',
+            color: '#333',
+            borderRadius: '6px',
+            fontSize: '13px',
+            fontWeight: '600',
+            cursor: 'pointer',
         },
         usersList: {
             listStyle: 'none',
@@ -258,6 +273,49 @@ function LobbyPage({ username, onlineUsers, allUsers, onLogout, onStartChat }) {
                                                 fontWeight: '600',
                                             }}>
                                                 {isOnline ? 'Online' : 'Offline'}
+                                            </span>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        )}
+                    </div>
+
+                    {/* Groups Section */}
+                    <div style={styles.section}>
+                        <div style={{ ...styles.sectionTitle, justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                🧑‍🤝‍🧑 Groups
+                                <span style={styles.userCount}>{groups.length}</span>
+                            </div>
+                            <div style={styles.headerActions}>
+                                <button
+                                    style={styles.createGroupBtn}
+                                    onClick={() => {
+                                        if (typeof onCreateGroup !== 'function') return;
+                                        const name = window.prompt('Group name');
+                                        if (name && name.trim()) onCreateGroup(name.trim());
+                                    }}
+                                >
+                                    + Create Group
+                                </button>
+                            </div>
+                        </div>
+                        {groups.length === 0 ? (
+                            <div style={styles.noUsersMessage}>No groups yet</div>
+                        ) : (
+                            <ul style={styles.usersList}>
+                                {groups.map((g) => {
+                                    const isMember = Array.isArray(g.members) && g.members.includes(username);
+                                    return (
+                                        <li key={g._id || g.id || g.name} style={{ ...styles.userItem }} className="user-item"
+                                            onClick={() => {
+                                                if (typeof onOpenGroup === 'function') onOpenGroup(g);
+                                            }}
+                                        >
+                                            <span style={styles.userNameText}>{g.name}</span>
+                                            <span style={{ fontSize: 12, color: isMember ? '#667eea' : '#999', fontWeight: 600 }}>
+                                                {Array.isArray(g.members) ? `${g.members.length} members` : ''} {isMember ? '• Joined' : ''}
                                             </span>
                                         </li>
                                     );

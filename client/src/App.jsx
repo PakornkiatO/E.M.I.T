@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import LoginPage from './pages/loginPage';
 import LobbyPage from './pages/lobbyPage';
 import ChatPage from './pages/chatPage';
+import GroupChatPage from './pages/groupChatPage';
 import { jwtDecode } from 'jwt-decode';
 import socket from './socket/socket';
 import axios from 'axios';
@@ -13,7 +14,9 @@ function App() {
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [forceLogoutMessage, setForceLogoutMessage] = useState('');
+  const [groups, setGroups] = useState([]);
   const [peer, setPeer] = useState(null);
+  const [activeGroup, setActiveGroup] = useState(null);
 
   useEffect(() => {
     if (token) {
@@ -73,7 +76,7 @@ function App() {
     return () => clearInterval(interval);
   }, [username]);
 
-  // Setup socket listeners for real-time updates (listen from the start)
+  // Setup socket listeners for real-time updates (users & groups)
   useEffect(() => {
     const onUsersUpdated = (data) => {
       // Update user list in real-time when new user registers or is deleted
@@ -102,12 +105,18 @@ function App() {
       setAllUsers(prevUsers => prevUsers.filter(u => u !== data.deletedUsername));
     };
 
+    const onGroupsUpdated = (data) => {
+      if (Array.isArray(data?.groups)) setGroups(data.groups);
+    };
+
     socket.on('users_updated', onUsersUpdated);
     socket.on('user_deleted', onUserDeleted);
+    socket.on('groups_updated', onGroupsUpdated);
 
     return () => {
       socket.off('users_updated', onUsersUpdated);
       socket.off('user_deleted', onUserDeleted);
+      socket.off('groups_updated', onGroupsUpdated);
     };
   }, [username]);
   // connect socket on page visit
@@ -193,6 +202,31 @@ function App() {
     if (socket.connected) socket.disconnect();
   };
 
+  // Fetch groups periodically when authenticated
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    const fetchGroups = async () => {
+      try {
+        const API_URL = `http://${window.location.hostname}:3001/api/chat/groups`;
+        const res = await axios.get(API_URL, { headers: { Authorization: `Bearer ${token}` } });
+        const list = res.data?.groups || [];
+        if (!cancelled) {
+          setGroups(list);
+          // If active group was deleted, auto exit
+          if (activeGroup && !list.some(g => g._id === activeGroup._id)) {
+            setActiveGroup(null);
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+    fetchGroups();
+    const id = setInterval(fetchGroups, 3000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [token, activeGroup]);
+
   if (!token) {
     return <LoginPage onAuth={handleAuth} />;
   }
@@ -228,20 +262,53 @@ function App() {
           </div>
         </div>
       )}
-      {peer ? (
+      {peer && !activeGroup && (
         <ChatPage
           me={username}
           peer={peer}
           token={token}
           onBack={() => setPeer(null)}
         />
-      ) : (
+      )}
+      {activeGroup && !peer && (
+        <GroupChatPage
+          me={username}
+          group={activeGroup}
+          token={token}
+          onBack={() => setActiveGroup(null)}
+        />
+      )}
+      {!peer && !activeGroup && (
         <LobbyPage 
           username={username} 
           onlineUsers={onlineUsers}
           allUsers={allUsers}
+          groups={groups}
           onLogout={handleLogout}
           onStartChat={(u) => setPeer(u)}
+          onCreateGroup={async (groupName) => {
+            try {
+              const API_URL = `http://${window.location.hostname}:3001/api/chat/groups`;
+              await axios.post(API_URL, { name: groupName }, { headers: { Authorization: `Bearer ${token}` } });
+            } catch (e) {
+              alert(e?.response?.data?.message || 'Failed to create group');
+            }
+          }}
+          onOpenGroup={(group) => {
+            if (!group.members.includes(username)) {
+              // join first via REST
+              const API_URL = `http://${window.location.hostname}:3001/api/chat/groups/${group._id}/join`;
+              axios.post(API_URL, {}, { headers: { Authorization: `Bearer ${token}` } })
+                .then(res => {
+                  setActiveGroup(res.data.group);
+                })
+                .catch(err => {
+                  alert(err?.response?.data?.message || 'Failed to join group');
+                });
+            } else {
+              setActiveGroup(group);
+            }
+          }}
         />
       )}
     </>
