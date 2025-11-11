@@ -139,6 +139,32 @@ function LobbyPage({ username, onlineUsers, allUsers, groups = [], censorWords =
             borderRadius: '8px',
             fontSize: '14px',
         },
+        groupItemInner: {
+            display: 'flex',
+            flexDirection: 'column',
+            width: '100%',
+            gap: '8px',
+        },
+        groupHeaderRow: {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+        },
+        membersRow: {
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '6px',
+        },
+        memberChip: {
+            background: '#eef2ff',
+            color: '#334155',
+            border: '1px solid #c7d2fe',
+            padding: '4px 8px',
+            borderRadius: '999px',
+            fontSize: '12px',
+            fontWeight: 600,
+        },
     };
 
     return (
@@ -307,16 +333,28 @@ function LobbyPage({ username, onlineUsers, allUsers, groups = [], censorWords =
                             <ul style={styles.usersList}>
                                 {groups.map((g) => {
                                     const isMember = Array.isArray(g.members) && g.members.includes(username);
+                                    const members = Array.isArray(g.members) ? g.members : [];
                                     return (
                                         <li key={g._id || g.id || g.name} style={{ ...styles.userItem }} className="user-item"
                                             onClick={() => {
                                                 if (typeof onOpenGroup === 'function') onOpenGroup(g);
                                             }}
                                         >
-                                            <span style={styles.userNameText}>{g.name}</span>
-                                            <span style={{ fontSize: 12, color: isMember ? '#667eea' : '#999', fontWeight: 600 }}>
-                                                {Array.isArray(g.members) ? `${g.members.length} members` : ''} {isMember ? '• Joined' : ''}
-                                            </span>
+                                            <div style={styles.groupItemInner}>
+                                                <div style={styles.groupHeaderRow}>
+                                                    <span style={styles.userNameText}>{g.name}</span>
+                                                    <span style={{ fontSize: 12, color: isMember ? '#667eea' : '#999', fontWeight: 600 }}>
+                                                        {members.length} members {isMember ? '• Joined' : ''}
+                                                    </span>
+                                                </div>
+                                                {members.length > 0 && (
+                                                    <div style={styles.membersRow}>
+                                                        {members.map((m) => (
+                                                            <span key={m} style={styles.memberChip}>{m}</span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </li>
                                     );
                                 })}

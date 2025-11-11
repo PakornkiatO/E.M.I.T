@@ -118,12 +118,13 @@ exports.joinGroup = async (req, res) => {
   try {
     const me = req.user?.username;
     const { id } = req.params;
-    const group = await Group.findById(id);
+    // Atomic add to set to avoid duplicate membership on concurrent joins
+    const group = await Group.findByIdAndUpdate(
+      id,
+      { $addToSet: { members: me } },
+      { new: true }
+    );
     if (!group) return res.status(404).json({ message: 'group_not_found' });
-    if (!group.members.includes(me)) {
-      group.members.push(me);
-      await group.save();
-    }
 
     const io = req.app.get('io');
     if (io) {
