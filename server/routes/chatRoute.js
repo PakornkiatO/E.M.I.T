@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
-const { getHistory, deleteMessage, clearHistory, listGroups, createGroup, joinGroup, deleteGroupMessage, clearGroupHistory } = require('../controllers/chatController');
+const { getHistory, deleteMessage, clearHistory, listGroups, createGroup, joinGroup, deleteGroupMessage, clearGroupHistory, listCensorWords, addCensorWord, deleteCensorWord } = require('../controllers/chatController');
 
 // Get chat history with other user
 router.get('/history/:other', auth, getHistory);
@@ -13,5 +13,10 @@ router.post('/groups', auth, createGroup);
 router.post('/groups/:id/join', auth, joinGroup);
 router.delete('/groups/:id/messages/:msgId', auth, deleteGroupMessage);
 router.delete('/groups/:id/history', auth, clearGroupHistory);
+
+// censorship endpoints
+router.get('/censor', auth, listCensorWords);
+router.post('/censor', auth, addCensorWord);
+router.delete('/censor/:id', auth, deleteCensorWord);
 
 module.exports = router;

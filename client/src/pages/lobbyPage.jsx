@@ -1,4 +1,4 @@
-function LobbyPage({ username, onlineUsers, allUsers, groups = [], onLogout, onStartChat, onCreateGroup, onOpenGroup }) {
+function LobbyPage({ username, onlineUsers, allUsers, groups = [], censorWords = [], onLogout, onStartChat, onCreateGroup, onOpenGroup, onAddCensorWord, onRemoveCensorWord }) {
     const styles = {
         container: {
             display: 'flex',
@@ -323,6 +323,49 @@ function LobbyPage({ username, onlineUsers, allUsers, groups = [], onLogout, onS
                             </ul>
                         )}
                     </div>
+
+                                        {/* Censorship Admin Section */}
+                                        <div style={styles.section}>
+                                                <h2 style={styles.sectionTitle}>🚫 Censored Words <span style={styles.userCount}>{censorWords.length}</span></h2>
+                                                <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                                                                                    <input id="censor-new-word" placeholder="Add word" style={{ flex: 1, padding: '10px', border: '1px solid #ddd', borderRadius: 6 }}
+                                                             onKeyDown={(e) => {
+                                                                 if (e.key === 'Enter') {
+                                                                     const val = e.currentTarget.value.trim();
+                                                                     if (val) {
+                                                                                                     if (typeof onAddCensorWord === 'function') onAddCensorWord(val);
+                                                                         e.currentTarget.value='';
+                                                                     }
+                                                                 }
+                                                             }} />
+                                                        <button style={{ padding: '10px 16px', background: '#ffe8e8', border: '1px solid #ffb4b4', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}
+                                                            onClick={() => {
+                                                                const inp = document.getElementById('censor-new-word');
+                                                                if (!inp) return;
+                                                                const val = inp.value.trim();
+                                                                                            if (val && typeof onAddCensorWord === 'function') {
+                                                                                                onAddCensorWord(val);
+                                                                    inp.value='';
+                                                                }
+                                                            }}>Add</button>
+                                                </div>
+                                                {censorWords.length === 0 ? (
+                                                    <div style={styles.noUsersMessage}>No censored words</div>
+                                                ) : (
+                                                    <ul style={styles.usersList}>
+                                                        {censorWords.map(w => (
+                                                            <li key={w} style={{ ...styles.userItem, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                <span style={{ fontWeight: 600 }}>{w}</span>
+                                                                <button style={{ padding: '4px 10px', background: '#fff1f1', border: '1px solid #ffb4b4', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}
+                                                                                                        onClick={() => {
+                                                                                                            if (typeof onRemoveCensorWord === 'function') onRemoveCensorWord(w);
+                                                                                                        }}>Remove</button>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                )}
+                                                <p style={{ fontSize: 12, color: '#666', marginTop: 8 }}>Words are matched case-insensitively as whole words.</p>
+                                        </div>
                 </div>
             </div>
         </>

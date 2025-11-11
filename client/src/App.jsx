@@ -17,6 +17,8 @@ function App() {
   const [groups, setGroups] = useState([]);
   const [peer, setPeer] = useState(null);
   const [activeGroup, setActiveGroup] = useState(null);
+  const [censorItems, setCensorItems] = useState([]); // [{_id, word}]
+  const censorWords = censorItems.map(w => w.word);
 
   useEffect(() => {
     if (token) {
@@ -227,6 +229,26 @@ function App() {
     return () => { cancelled = true; clearInterval(id); };
   }, [token, activeGroup]);
 
+  // Fetch censor words and subscribe to updates
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    const fetchWords = async () => {
+      try {
+        const API_URL = `http://${window.location.hostname}:3001/api/chat/censor`;
+        const res = await axios.get(API_URL, { headers: { Authorization: `Bearer ${token}` } });
+        if (!cancelled) setCensorItems(res.data?.words || []);
+      } catch (e) { /* ignore */ }
+    };
+    fetchWords();
+    const onCensorUpdated = (data) => {
+      if (Array.isArray(data?.words)) setCensorItems(data.words.map(w => ({ _id: w._id, word: w.word || w })));
+    };
+    socket.on('censor_updated', onCensorUpdated);
+    const id = setInterval(fetchWords, 10000); // occasional refresh
+    return () => { cancelled = true; clearInterval(id); socket.off('censor_updated', onCensorUpdated); };
+  }, [token]);
+
   if (!token) {
     return <LoginPage onAuth={handleAuth} />;
   }
@@ -267,6 +289,7 @@ function App() {
           me={username}
           peer={peer}
           token={token}
+          censorWords={censorWords}
           onBack={() => setPeer(null)}
         />
       )}
@@ -275,6 +298,7 @@ function App() {
           me={username}
           group={activeGroup}
           token={token}
+          censorWords={censorWords}
           onBack={() => setActiveGroup(null)}
         />
       )}
@@ -284,6 +308,25 @@ function App() {
           onlineUsers={onlineUsers}
           allUsers={allUsers}
           groups={groups}
+          censorWords={censorWords}
+          onAddCensorWord={async (word) => {
+            try {
+              const API_URL = `http://${window.location.hostname}:3001/api/chat/censor`;
+              await axios.post(API_URL, { word }, { headers: { Authorization: `Bearer ${token}` } });
+            } catch (e) {
+              alert(e?.response?.data?.message || 'Failed to add word');
+            }
+          }}
+          onRemoveCensorWord={async (word) => {
+            try {
+              const item = censorItems.find(w => (w.word || '').toLowerCase() === (word || '').toLowerCase());
+              if (!item?._id) return;
+              const API_URL = `http://${window.location.hostname}:3001/api/chat/censor/${item._id}`;
+              await axios.delete(API_URL, { headers: { Authorization: `Bearer ${token}` } });
+            } catch (e) {
+              alert(e?.response?.data?.message || 'Failed to remove word');
+            }
+          }}
           onLogout={handleLogout}
           onStartChat={(u) => setPeer(u)}
           onCreateGroup={async (groupName) => {

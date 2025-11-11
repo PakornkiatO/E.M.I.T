@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import socket from '../socket/socket';
 import axios from 'axios';
 
-function GroupChatPage({ token, me, group, onBack }) {
+function GroupChatPage({ token, me, group, censorWords = [], onBack }) {
   const [messages, setMessages] = useState([]);
   const [groupInfo, setGroupInfo] = useState(group);
   const [text, setText] = useState('');
@@ -110,6 +110,29 @@ function GroupChatPage({ token, me, group, onBack }) {
     clearBtn: { border: 'none', background: '#ffdede', color: '#a33', padding: '8px 12px', borderRadius: 8, cursor: 'pointer' },
   };
 
+  // Censor rendering utility (same as in ChatPage)
+  const renderContent = (raw) => {
+    if (!raw) return '';
+    if (!Array.isArray(censorWords) || censorWords.length === 0) return raw;
+    const escaped = censorWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    if (escaped.length === 0) return raw;
+    const pattern = new RegExp(`(${escaped.join('|')})`, 'giu');
+    const parts = raw.split(pattern);
+    const matches = raw.match(pattern);
+    if (!matches) return raw;
+    let matchIndex = 0;
+    return parts.map((part, idx) => {
+      if (idx % 2 === 1) {
+        const word = matches[matchIndex++] || '';
+        const widthEm = Math.max(1, (word.length || 3) * 0.6);
+        return (
+          <span key={idx} style={{ background: '#000', color: '#000', borderRadius: 4, display: 'inline-block', width: `${widthEm}em`, height: '1em', verticalAlign: 'middle' }} title="Censored" />
+        );
+      }
+      return part;
+    });
+  };
+
   return (
     <div style={styles.wrapper}>
       <div style={styles.header}>
@@ -126,7 +149,7 @@ function GroupChatPage({ token, me, group, onBack }) {
             <div key={m._id} style={{ ...styles.bubbleRow, justifyContent: mine ? 'flex-end' : 'flex-start' }}>
               <div style={{ ...styles.bubble, ...(mine ? styles.me : styles.other) }}>
                 <div style={{ fontSize: 11, opacity: 0.7, marginBottom: 4 }}>{m.sender}</div>
-                <div style={{ fontSize: 14 }}>{m.content}</div>
+                <div style={{ fontSize: 14 }}>{renderContent(m.content)}</div>
                 <div style={{ fontSize: 10, opacity: 0.6, marginTop: 6 }}>{new Date(m.createdAt || Date.now()).toLocaleTimeString()}</div>
                 {mine && (
                   <button style={styles.delBtn} title="Delete" onClick={() => socket.emit('delete_group_message', { groupId: group._id, id: m._id })}>×</button>

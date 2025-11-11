@@ -1,6 +1,7 @@
 const Message = require("../models/messageModel");
 const User = require("../models/userModel");
 const Group = require("../models/groupModel");
+const CensorWord = require("../models/censorWordModel");
 
 function roomKeyFor(a, b) {
   return [a, b].sort((x, y) => x.localeCompare(y)).join("|");
@@ -173,6 +174,60 @@ exports.clearGroupHistory = async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('clearGroupHistory error:', err);
+    res.status(500).json({ message: 'server_error' });
+  }
+};
+
+// ===== Censorship APIs =====
+exports.listCensorWords = async (req, res) => {
+  try {
+    const words = await CensorWord.find({}, { word: 1, createdAt: 1 }).sort({ word: 1 }).lean();
+    res.json({ words });
+  } catch (err) {
+    console.error('listCensorWords error:', err);
+    res.status(500).json({ message: 'server_error' });
+  }
+};
+
+exports.addCensorWord = async (req, res) => {
+  try {
+    const me = req.user?.username;
+    const { word } = req.body || {};
+    if (!word || typeof word !== 'string' || !word.trim()) {
+      return res.status(400).json({ message: 'invalid_word' });
+    }
+    const lower = word.trim().toLowerCase();
+    const doc = await CensorWord.create({ word: lower, createdBy: me });
+    // Emit update
+    const io = req.app.get('io');
+    if (io) {
+      const words = await CensorWord.find({}, { word: 1 }).sort({ word: 1 }).lean();
+      io.emit('censor_updated', { words });
+    }
+    res.status(201).json({ word: doc });
+  } catch (err) {
+    if (err?.code === 11000) {
+      return res.status(409).json({ message: 'word_exists' });
+    }
+    console.error('addCensorWord error:', err);
+    res.status(500).json({ message: 'server_error' });
+  }
+};
+
+exports.deleteCensorWord = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const existing = await CensorWord.findById(id);
+    if (!existing) return res.status(404).json({ message: 'not_found' });
+    await CensorWord.deleteOne({ _id: id });
+    const io = req.app.get('io');
+    if (io) {
+      const words = await CensorWord.find({}, { word: 1 }).sort({ word: 1 }).lean();
+      io.emit('censor_updated', { words });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('deleteCensorWord error:', err);
     res.status(500).json({ message: 'server_error' });
   }
 };
