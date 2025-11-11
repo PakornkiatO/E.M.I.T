@@ -1,4 +1,4 @@
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import LoginPage from './pages/logginPage';
 import { jwtDecode } from 'jwt-decode';
 import socket from './socket/socket';
@@ -6,6 +6,7 @@ import socket from './socket/socket';
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [username, setUsername] = useState(localStorage.getItem('username') || null);
+  const [isOnline, setIsOnline] = useState(false);
 
   useEffect(() => {
     if (token) {
@@ -14,6 +15,49 @@ function App() {
       }
     }
   }, [token]);
+  // connect socket on page visit
+  useEffect(() => {
+    if (!socket.connected) {
+      socket.connect();
+    }
+
+    const onConnect = () => {
+      // if user already logged in (has token), notify server to mark as online
+      if (token && username) {
+        socket.emit('user_connected', { username });
+        setIsOnline(true);
+      }
+    };
+
+    const onOnlineUsers = (users) => {
+      // users is array of { socketId, username }
+      const isNowOnline = users.some(u => u.username === username);
+      setIsOnline(isNowOnline);
+      // you could store users list if needed
+      // setOnlineUsers(users);
+    };
+
+    const onForceLogout = (data) => {
+      // server forced this socket to logout because user logged in elsewhere
+      console.log('Received force_logout', data);
+      // clear auth and reload to show login page
+      localStorage.removeItem('token');
+      localStorage.removeItem('username');
+      setToken(null);
+      setUsername(null);
+      setIsOnline(false);
+    };
+
+    socket.on('connect', onConnect);
+    socket.on('online_users', onOnlineUsers);
+    socket.on('force_logout', onForceLogout);
+
+    return () => {
+      socket.off('connect', onConnect);
+      socket.off('online_users', onOnlineUsers);
+      socket.off('force_logout', onForceLogout);
+    };
+  }, [token, username]);
 
   // Function to check if token is expired
   const isTokenExpired = (token) => {
@@ -26,35 +70,25 @@ function App() {
     }
   };
 
-  const connectSocket = () => {
-    if (!socket.connected) {
-      socket.data = { username };
-      socket.connect();
-    }
-  };
-
-  const disconnectSocket = () => {
-    if (socket.connected) {
-      socket.disconnect();
-    }
-  };
-
   const handleAuth = (newToken, newUsername) => {
     setToken(newToken);
     setUsername(newUsername);
     localStorage.setItem('token', newToken);
     localStorage.setItem('username', newUsername);
-
-    connectSocket();
+    // if socket already connected, emit; otherwise the connect handler will emit
+    if (socket.connected) {
+      socket.emit('user_connected', { username: newUsername });
+      setIsOnline(true);
+    }
   };
 
   const handleLogout = () => {
-    disconnectSocket();
     setToken(null);
     setUsername(null);
+    setIsOnline(false);
     localStorage.removeItem('token');
     localStorage.removeItem('username');
-
+    if (socket.connected) socket.emit('user_disconnected');
   };
 
   if (!token) {
